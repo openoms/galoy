@@ -1,5 +1,11 @@
 name: "Galoy Banking"
 
+locale: "en"
+
+displayCurrency:
+  code: "USD"
+  symbol: "$"
+
 # username of the account that will be used to fund rewards
 funder: "FunderWallet"
 
@@ -15,7 +21,7 @@ coldStorage:
   minOnChainHotWalletBalance: 1000000 # 0.1
   minRebalanceSize: 10000000 # 0.1
   maxHotWalletBalance: 200000000 # 2
-  
+
   # pattern used to load cold storage wallet balances
   # string.include() is being used as a filter
   walletPattern: "specter"
