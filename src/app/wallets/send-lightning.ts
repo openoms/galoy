@@ -27,7 +27,12 @@ import { toCents } from "@domain/fiat"
 import { DisplayCurrencyConverter } from "@domain/fiat/display-currency"
 import { CachedRouteLookupKeyFactory } from "@domain/routes/key-factory"
 import { WalletInvoiceValidator } from "@domain/wallet-invoices"
-import { AmountMathWrapper, paymentAmountFromCents, paymentAmountFromSats, WalletCurrency } from "@domain/shared"
+import {
+  AmountMathWrapper,
+  paymentAmountFromCents,
+  paymentAmountFromSats,
+  WalletCurrency,
+} from "@domain/shared"
 import {
   PaymentInitiationMethod,
   PaymentInputValidator,
@@ -49,9 +54,10 @@ import { addAttributesToCurrentSpan } from "@services/tracing"
 
 import { DealerPriceServiceError } from "@domain/dealer-price"
 
-import { getNoAmountLightningFee, getRoutingFee } from "./get-lightning-fee"
 import * as LedgerFacade from "@services/ledger/facade"
 import { UnknownLedgerError } from "@domain/ledger"
+
+import { getNoAmountLightningFee, getRoutingFee } from "./get-lightning-fee"
 
 export const payInvoiceByWalletIdWithTwoFA = async ({
   paymentRequest,
@@ -89,14 +95,14 @@ export const payInvoiceByWalletIdWithTwoFA = async ({
 
   const twoFACheck = twoFA?.secret
     ? await checkAndVerifyTwoFA({
-      amount: lnInvoiceAmount,
-      twoFAToken: twoFAToken ? (twoFAToken as TwoFAToken) : null,
-      twoFASecret: twoFA.secret,
-      walletId: senderWalletId,
-      walletCurrency: senderWallet.currency,
-      dCConverter,
-      account: senderAccount,
-    })
+        amount: lnInvoiceAmount,
+        twoFAToken: twoFAToken ? (twoFAToken as TwoFAToken) : null,
+        twoFASecret: twoFA.secret,
+        walletId: senderWalletId,
+        walletCurrency: senderWallet.currency,
+        dCConverter,
+        account: senderAccount,
+      })
     : true
   if (twoFACheck instanceof Error) return twoFACheck
 
@@ -197,14 +203,14 @@ export const payNoAmountInvoiceByWalletIdWithTwoFAArgs = async ({
 
   const twoFACheck = twoFA?.secret
     ? await checkAndVerifyTwoFA({
-      amount,
-      dCConverter,
-      twoFAToken: twoFAToken ? (twoFAToken as TwoFAToken) : null,
-      twoFASecret: twoFA.secret,
-      walletId: senderWalletId,
-      walletCurrency: senderWallet.currency,
-      account: senderAccount,
-    })
+        amount,
+        dCConverter,
+        twoFAToken: twoFAToken ? (twoFAToken as TwoFAToken) : null,
+        twoFASecret: twoFA.secret,
+        walletId: senderWalletId,
+        walletCurrency: senderWallet.currency,
+        account: senderAccount,
+      })
     : true
   if (twoFACheck instanceof Error) return twoFACheck
 
@@ -590,7 +596,7 @@ const executePaymentViaLn = async ({
   if (!(cachedRoute instanceof Error)) {
     // route has been cached
 
-    ; ({ pubkey, route: rawRoute } = cachedRoute)
+    ;({ pubkey, route: rawRoute } = cachedRoute)
     feeRouting = toSats(rawRoute.safe_fee)
 
     if (senderWallet.currency === WalletCurrency.Usd) {
@@ -649,17 +655,20 @@ const executePaymentViaLn = async ({
     { walletId: senderWallet.id, logger },
     async (lock) => {
       const ledgerService = LedgerService()
-      const balance = await LedgerFacade.getLedgerAccountBalanceForWalletId({id: senderWallet.id, currency: senderWallet.currency})
+      const balance = await LedgerFacade.getLedgerAccountBalanceForWalletId({
+        id: senderWallet.id,
+        currency: senderWallet.currency,
+      })
 
       if (balance instanceof Error) return balance
 
-      const lnTxSendMetadata = LedgerFacade.LnTxSendMetadata({
+      const lnTxSendMetadata = LedgerFacade.LnSendLedgerMetadata({
         paymentHash,
         fee: paymentAmountFromSats(feeRouting),
-        feeDisplayCurrency: feeRoutingDisplayCurrency,
-        amountDisplayCurrency: amountDisplayCurrency,
+        feeDisplayUsd: feeRoutingDisplayCurrency,
+        amountDisplayUsd: amountDisplayCurrency,
         pubkey,
-        feeKnownInAdvance: !!rawRoute
+        feeKnownInAdvance: !!rawRoute,
       })
 
       let journal: LockServiceError | LedgerJournal | UnknownLedgerError
@@ -677,12 +686,15 @@ const executePaymentViaLn = async ({
             description: decodedInvoice.description,
             senderWalletDescriptor: {
               id: senderWallet.id,
-              currency: senderWallet.currency
+              currency: senderWallet.currency,
             },
-            amount: { usd: paymentAmountFromCents(cents as UsdCents), btc: paymentAmountFromSats(sats) },
+            amount: {
+              usd: paymentAmountFromCents(cents as UsdCents),
+              btc: paymentAmountFromSats(sats),
+            },
             fee: paymentAmountFromSats(feeRouting),
-            metadata: lnTxSendMetadata
-          })
+            metadata: lnTxSendMetadata,
+          }),
         )
       }
       // Wallet curreny = BTC
@@ -697,12 +709,12 @@ const executePaymentViaLn = async ({
             description: decodedInvoice.description,
             senderWalletDescriptor: {
               id: senderWallet.id,
-              currency: senderWallet.currency
+              currency: senderWallet.currency,
             },
             amount: paymentAmountFromSats(sats),
             fee: paymentAmountFromSats(feeRouting),
-            metadata: lnTxSendMetadata
-          })
+            metadata: lnTxSendMetadata,
+          }),
         )
       }
 
@@ -711,15 +723,15 @@ const executePaymentViaLn = async ({
 
       const payResult = rawRoute
         ? await lndService.payInvoiceViaRoutes({
-          paymentHash,
-          rawRoute,
-          pubkey,
-        })
+            paymentHash,
+            rawRoute,
+            pubkey,
+          })
         : await lndService.payInvoiceViaPaymentDetails({
-          decodedInvoice,
-          milliSatsAmount: toMilliSatsFromNumber(amount * 1000),
-          maxFee: feeRouting,
-        })
+            decodedInvoice,
+            milliSatsAmount: toMilliSatsFromNumber(amount * 1000),
+            maxFee: feeRouting,
+          })
 
       // Fire-and-forget update to 'lnPayments' collection
       if (!(payResult instanceof LnAlreadyPaidError)) {

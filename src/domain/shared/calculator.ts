@@ -38,6 +38,6 @@ export const AmountMathWrapper = <T extends WalletCurrency>(base: PaymentAmount<
     add,
     sub,
     lessThan,
-    value
+    value,
   }
 }

@@ -10,7 +10,7 @@ export const persistAndReturnEntry = async ({
   hash,
 }: {
   entry: Entry
-  hash: PaymentHash
+  hash: PaymentHash | OnChainTxHash
 }) => {
   try {
     const savedEntry = await entry.commit()
