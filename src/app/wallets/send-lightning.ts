@@ -27,7 +27,7 @@ import { toCents } from "@domain/fiat"
 import { DisplayCurrencyConverter } from "@domain/fiat/display-currency"
 import { CachedRouteLookupKeyFactory } from "@domain/routes/key-factory"
 import { WalletInvoiceValidator } from "@domain/wallet-invoices"
-import { paymentAmountFromCents, paymentAmountFromSats, WalletCurrency } from "@domain/shared"
+import { AmountMathWrapper, paymentAmountFromCents, paymentAmountFromSats, WalletCurrency } from "@domain/shared"
 import {
   PaymentInitiationMethod,
   PaymentInputValidator,
@@ -50,7 +50,7 @@ import { addAttributesToCurrentSpan } from "@services/tracing"
 import { DealerPriceServiceError } from "@domain/dealer-price"
 
 import { getNoAmountLightningFee, getRoutingFee } from "./get-lightning-fee"
-import { LedgerFacade } from "@services/ledger/facade"
+import * as LedgerFacade from "@services/ledger/facade"
 import { UnknownLedgerError } from "@domain/ledger"
 
 export const payInvoiceByWalletIdWithTwoFA = async ({
@@ -649,13 +649,11 @@ const executePaymentViaLn = async ({
     { walletId: senderWallet.id, logger },
     async (lock) => {
       const ledgerService = LedgerService()
-      const ledgerFacade = LedgerFacade()
-
-      const balance = await ledgerService.getWalletBalance(senderWallet.id)
+      const balance = await LedgerFacade.getLedgerAccountBalanceForWalletId({id: senderWallet.id, currency: senderWallet.currency})
 
       if (balance instanceof Error) return balance
 
-      const lnTxSendMetadata = ledgerFacade.addLnTxSendMetadata({
+      const lnTxSendMetadata = LedgerFacade.LnTxSendMetadata({
         paymentHash,
         fee: paymentAmountFromSats(feeRouting),
         feeDisplayCurrency: feeRoutingDisplayCurrency,
@@ -669,16 +667,18 @@ const executePaymentViaLn = async ({
       if (senderWallet.currency === WalletCurrency.Usd) {
         if (cents === undefined) return new NotReachableError("cents is set here")
 
-        if (balance < cents)
+        if (AmountMathWrapper(balance).lessThan(paymentAmountFromCents(cents)))
           return new InsufficientBalanceError(
             `Payment amount '${cents}' cents exceeds balance '${balance}'`,
           )
 
         journal = await LockService().extendLock({ logger, lock }, async () =>
-          ledgerFacade.recordSend({
+          LedgerFacade.recordSend({
             description: decodedInvoice.description,
-            senderWalletId: senderWallet.id,
-            senderWalletCurrency: senderWallet.currency,
+            senderWalletDescriptor: {
+              id: senderWallet.id,
+              currency: senderWallet.currency
+            },
             amount: { usd: paymentAmountFromCents(cents as UsdCents), btc: paymentAmountFromSats(sats) },
             fee: paymentAmountFromSats(feeRouting),
             metadata: lnTxSendMetadata
@@ -687,16 +687,18 @@ const executePaymentViaLn = async ({
       }
       // Wallet curreny = BTC
       else {
-        if (balance < sats)
+        if (AmountMathWrapper(balance).lessThan(paymentAmountFromSats(sats)))
           return new InsufficientBalanceError(
             `Payment amount '${sats}' sats exceeds balance '${balance}'`,
           )
 
         journal = await LockService().extendLock({ logger, lock }, async () =>
-          ledgerFacade.recordSend({
+          LedgerFacade.recordSend({
             description: decodedInvoice.description,
-            senderWalletId: senderWallet.id,
-            senderWalletCurrency: senderWallet.currency,
+            senderWalletDescriptor: {
+              id: senderWallet.id,
+              currency: senderWallet.currency
+            },
             amount: paymentAmountFromSats(sats),
             fee: paymentAmountFromSats(feeRouting),
             metadata: lnTxSendMetadata
