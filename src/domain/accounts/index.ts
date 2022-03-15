@@ -9,6 +9,7 @@ import {
 
 export * from "./errors"
 export * from "./limits-checker"
+export * from "./new-limits-checker"
 
 export const AccountLevel = {
   One: 1,
