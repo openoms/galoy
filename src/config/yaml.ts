@@ -9,7 +9,7 @@ import { checkedToTargetConfs, toSats } from "@domain/bitcoin"
 import Ajv from "ajv"
 import { toCents } from "@domain/fiat"
 
-import { ConfigSchema, configSchema } from "./schema"
+import { ConfigSchema, configSchema, RewardsConfigSchema } from "./schema"
 import { ConfigError } from "./error"
 
 const defaultContent = fs.readFileSync("./default.yaml", "utf8")
@@ -210,3 +210,10 @@ export const getTestAccounts = (config = yamlConfig): TestAccount[] =>
   config.test_accounts
 
 export const getCronConfig = (config = yamlConfig): CronConfig => config.cronConfig
+
+export const getRewardsConfig = (): RewardsConfigSchema => {
+  const whitelistedCountries = yamlConfig.rewards.whitelistedCountries || []
+  return {
+    whitelistedCountries: whitelistedCountries.map((c) => c.toUpperCase()),
+  }
+}

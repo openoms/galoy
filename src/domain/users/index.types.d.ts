@@ -62,7 +62,7 @@ type NewUserInfo = {
 }
 
 type PhoneMetadataValidator = {
-  validate(phoneMetadata: PhoneMetadata | null): true | ApplicationError
+  validateForReward(phoneMetadata: PhoneMetadata | null): true | ApplicationError
 }
 
 interface IUsersRepository {
