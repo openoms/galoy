@@ -6,6 +6,7 @@ import { MainBook } from "./books"
 import { EntryBuilder, toLedgerAccountId } from "./domain"
 import { persistAndReturnEntry } from "./helpers"
 import * as caching from "./caching"
+import { LnIntraledgerLedgerMetadata } from "./tx-metadata"
 export * from "./tx-metadata"
 
 const ZERO_SATS = {
@@ -35,7 +36,7 @@ type RecordSendArgs<T extends WalletCurrency> = {
         usd: UsdPaymentAmount
         btc: BtcPaymentAmount
       }
-  metadata: AddLnSendLedgerMetadata | AddOnchainSendLedgerMetadata
+  metadata: SendLedgerMetadata
   fee?: BtcPaymentAmount
 }
 
@@ -62,7 +63,7 @@ type RecordIntraledgerArgs<T extends WalletCurrency, V extends WalletCurrency> =
         usd: UsdPaymentAmount
         btc: BtcPaymentAmount
       }
-  metadata: any
+  metadata: IntraledgerLedgerMetadata
 }
 
 export const recordSend = async <T extends WalletCurrency>({
@@ -198,5 +199,5 @@ export const recordIntraledger = async <
         })
     }
   }
-  return persistAndReturnEntry({ entry, hash: metadata.hash })
+  return persistAndReturnEntry({entry, hash: "hash" in metadata ? metadata.hash : undefined })
 }

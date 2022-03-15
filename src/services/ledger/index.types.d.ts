@@ -43,22 +43,22 @@ type AddColdStorageReceiveLedgerMetadata = AddColdStorageLedgerMetadata
 
 type AddColdStorageSendLedgerMetadata = AddColdStorageLedgerMetadata
 
-type IntraledgerLedgerMetadata = LedgerMetadata & {
-  memoPayer: string | undefined
-  username: Username | undefined
+type IntraledgerBaseMetadata = LedgerMetadata & {
+  memoPayer: string | undefined | null
+  username: Username | undefined | null
 }
 
-type AddLnIntraledgerSendLedgerMetadata = IntraledgerLedgerMetadata & {
+type AddLnIntraledgerSendLedgerMetadata = IntraledgerBaseMetadata & {
   hash: PaymentHash
   pubkey: Pubkey
 }
 
-type AddOnChainIntraledgerSendLedgerMetadata = IntraledgerLedgerMetadata & {
+type AddOnChainIntraledgerSendLedgerMetadata = IntraledgerBaseMetadata & {
   payee_addresses: OnChainAddress[]
   sendAll: boolean
 }
 
-type AddWalletIdIntraledgerSendLedgerMetadata = IntraledgerLedgerMetadata
+type AddWalletIdIntraledgerSendLedgerMetadata = IntraledgerBaseMetadata
 
 type FeeReimbursementLedgerMetadata = {
   hash: PaymentHash
@@ -79,3 +79,12 @@ type ReceiveLedgerMetadata =
   | FeeReimbursementLedgerMetadata
   | LnReceiveLedgerMetadata
   | OnChainReceiveLedgerMetadata
+
+type IntraledgerLedgerMetadata = 
+  | AddOnChainIntraledgerSendLedgerMetadata
+  | AddLnIntraledgerSendLedgerMetadata
+  | AddWalletIdIntraledgerSendLedgerMetadata
+
+type SendLedgerMetadata =
+  | AddOnchainSendLedgerMetadata
+  | AddLnSendLedgerMetadata
